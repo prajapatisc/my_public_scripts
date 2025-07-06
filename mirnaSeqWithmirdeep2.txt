@@ -1,0 +1,210 @@
+
+### LITERATURE
+
+http://petang.cgu.edu.tw/Bioinfomatics/Lecture/0_HTS/2015/04/20120316.pdf
+
+https://drmirdeep.github.io/mirdeep2_tutorial.html
+
+https://github.com/rajewsky-lab/mirdeep2/blob/master/TUTORIAL.md
+
+https://www.mdc-berlin.de/content/mirdeep2-documentation?mdcbl%5B0%5D=/n-rajewsky%23t-data%2Csoftware%26resources&mdctl=0&mdcou=20738&mdcot=6&mdcbv=71nDTh7VzOJOW6SFGuFySs4mus4wnovu-t2LZzV2dL8
+
+https://github.com/rajewsky-lab/mirdeep2/blob/master/FAQ.md
+
+
+
+### Files needed for miRNA expression quantification by package mirdeep2:
+
+(1) reference_genome:
+	Can be downloaded from UCSC
+	wget http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
+
+(2) indexed_reference_genome:
+	first load python because bowtie-build needs python module to work
+	module load gcc/11.4.0  openmpi/4.1.4 python/3.11.4
+
+	then load bowtie2
+	module load bowtie2/2.5.1
+
+	then build genome index
+	bowtie-build hg38.fa hg38
+
+(3) mirna_reads.fa:
+	test files were downloaded from NCBI. Set <All Databases> to <GEO DataSest> and then search 	for <human microrna>. This will open different miRNA studies and associated datasets. Select 	the desired study and select <SRA Run Selector> to get the link for all the SRR runs. Desired 	SRR runs can be downloaded using faster-dump.
+
+	Put all the SRA identifiers in config.txt file. We download test miRNAseq dataset from NCBI 	GEO dataset or SRA from this 	study:	GSE252629 "Apolipoprotein L1 is a tumor suppressor in 	clear cell renal cell carcinoma 	metastasis"
+
+	cat > config.txt
+	SRR27440633
+	SRR27440634
+	SRR27440635
+	SRR27440646
+	SRR27440647
+	SRR27440649 
+
+	Use the following for_loop_script to download all the files in a config.txt file in the 	current directory. 
+
+	#!/bin/bash
+
+	for i in $(cat config.txt);
+	do
+		fasterq-dump $i -o sradata/$i
+	done
+
+
+	Rename them control1, control2, control3, test1, test2, test3 as needed like
+	mv SRR27440633 control1
+
+	Downsizing the read numbers to 1 million
+	head -1000000 SRR27440633 > SRR27440633.sub
+
+
+(4) precursor miRNA file:
+	Download precursor precursor miRNA file from miRBase22 (website: miRBase.org). This file contains many 		species miRNA. Extract human miRNA using the following code.
+	extract_miRNAs.pl hairpin.fa hsa > hairpin_hsa.fa
+
+(5) mature miRNA file:
+	Download precursor mature miRNA file from miRBase22 (website: miRBase.org). This file contains many 		species miRNA. Extract human miRNA using the following code.
+	extract_miRNAs.pl mature.fa hsa > mature_hsa.fa
+
+(6) mature miRNA other species file:
+	For this purpose Chimpanzee (Pan troglodytes) mature miRNA was extracted from mature miRNA file
+	extract_miRNAs.pl mature.fa ptr > mature_ptr_otherspecies.fa
+
+### Process and collapse reads to the reference genomemapper.pl <mirna_reads.fa> -e -i -j -k <first_8_nucleotide_of_adapter_seq> -l 18 -m -p hg38 -s reads_collapsed.fa -t 	reads_vs_hg38.arf -v -o 4
+
+With for loop:
+
+Place all the miRNA reads file names in a file map.txt
+cat > map.txt
+	sample1.fq 
+	sample2.fq 
+	sample3.fq 
+	sample4.fq 
+	sample5.fq 
+	sample6.fq 
+
+Run this slurm script:
+
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH -n 4
+#SBATCH --time=5:00:00
+#SBATCH --partition=standard
+#SBATCH -A sprajapati
+#SBATCH --mem=50GB
+
+module purge
+module load gcc/11.4.0
+module load openmpi/4.1.4
+module load python/3.11.4
+module load bowtie2/2.5.1
+module load mirdeep2/0.1.3
+
+for i in $(cat map.txt);
+do
+	mapper.pl $i -e -h -i -j -k <first_8_nucleotide_of_adapter_seq> -l 18 -m -p hg38 -s reads_collapsed_$i.fa -t reads_vs_hg38_$i.arf -v -o 4
+done
+
+
+Sequencing adapter sequence for the downloaded miRNA-Seq data files: 5′ TGGAATTCTCGGGTGCCAAGG 3'
+-e: miRNA reads file is in fastq format
+-c: miRNA reads file is in fasta format
+-i: convert RNA to DNA
+-j: remove sequences that contain characters other than ACGTN
+-k: clip adapter if a adapter sequence is given
+-l: discard reads whose length is shorter than 18 nucleotides
+-m: collapse reads
+-p: map reads to the indexed genome file hg38
+-s: preprocessed file name which is the output of the mapper
+-t: file name of the read mapping to the reference database hg38
+-v: outputs progress report
+-o : number of threads to use for bowtie
+
+
+### Quantification of mapped reads
+quantifier.pl -p hairpin_hsa.fa -m mature_hsa.fa -r reads_collapsed.fa -t hsa
+
+With for loop:
+Place all the collapsed file names a file quant.txt
+cat > quant.txt
+	sample1.reads_collapsed.fa 
+	sample2.reads_collapsed.fa
+	sample3.reads_collapsed.fa
+	sample4.reads_collapsed.fa
+	sample5.reads_collapsed.fa
+	sample6.reads_collapsed.fa
+
+Run this slurm script:
+
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH -n 4
+#SBATCH --time=5:00:00
+#SBATCH --partition=standard
+#SBATCH -A sprajapati
+#SBATCH --mem=50GB
+
+module purge
+module load gcc/11.4.0
+module load openmpi/4.1.4
+module load python/3.11.4
+module load bowtie2/2.5.1
+module load mirdeep2/0.1.3
+
+for i in $(cat quant.txt);
+do
+	quantifier.pl -p hairpin_hsa.fa -m mature_hsa.fa -r $i -t hsa
+	
+done
+
+-p: precursor_ref_miRNA file
+-m: mature_ref_miRNA file
+-r: collapsed read file
+-t: species id
+
+
+
+DOWNSTREAM ANALYSES:
+
+### DESeq2
+
+quantifier.pl script generates couple of file formats for each of the collapsed files generated from the mapper.pl script. miRNA counts are located in the .csv files. quantifier.pl script changes real sample IDs to arbitrary number IDs. Real sample IDs can be found in the <expression_analyses> folder and can be matched with arbitrary IDs of the .csv files. 
+
+.csv file has multiple columns.
+X.miRNA	:miRNA IDs
+read_count	:mature miRNA count. Use this count with ID names for DESeq2
+precursor	:precursor miRNA IDs
+total		:mature plus precursor miRNA count 
+seq		:sequences
+seq.norm	:normalized sequences. It is basically RPM. Do not use it for DESeq2
+
+Duplicate miRNA entries:
+One mature miRNA can be generated from multiple precursor miRNAs. Therefore we see duplicate miRNA entries with slightly varying count numbers. Take average counts for each miRNA duplicate entry to use in DESeq2 analysis. Here is the reference which suggest this.
+
+https://www.biostars.org/p/90159/
+
+
+miRNA Enrichment Analysis and Annotation (miEAA) tool: Can perform gene set enrichment analysis on a set of differentially expressed miRNAs. When using the miEAA tool, differentially expressed miRNAs (DEMs) should be arbitrarily sorted by expression level or p-value.
+miEAA: https://ccb-compute2.cs.uni-saarland.de/mieaa/
+
+Gene set enrichment analysis on a set of differentially expressed miRNAs:
+miEAA: https://ccb-compute2.cs.uni-saarland.de/mieaa/
+
+
+
+
+
+Target prediction of a specific miRNA:
+miRTarBase (experimentally validated):https://mirtarbase.cuhk.edu.cn/~miRTarBase/miRTarBase_2022/php/search.php
+TargetSacan: https://www.targetscan.org/vert_80/
+miRanada: https://bioweb.pasteur.fr/packages/pack@miRanda@3.3a
+miRDB: https://mirdb.org/
+miRwalk: http://mirwalk.umm.uni-heidelberg.de/
+miRPathDB: https://mpd.bioinf.uni-sb.de/
+
+miRNA-mRNA regulatory network prediction:
+Cytoscape: https://cytoscape.org/
+
+Common target genes from these predictions can be used to do gene set enrichment analysis for functional analysis
+

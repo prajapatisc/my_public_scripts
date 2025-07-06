@@ -1,0 +1,218 @@
+---
+title: "cebpd_crisprOCIAML5_DESeq_analysis"
+author: "SP"
+date: "3/9/2022"
+output: html_document
+---
+
+##Load packages
+
+```{r}
+# R packages
+library(digest)
+library(rlang)
+library(Rcpp)
+library(htmltools)
+library(glue)
+library(ellipsis)
+library(fansi)
+library(vctrs)
+library(tibble)
+library(dplyr)
+library(lattice)
+library(BiocManager)
+library(pkgload)
+library(tidyverse)
+library(renv)
+library(here)
+
+# Bionconductor
+library(S4Vectors)
+library(IRanges)
+library(DelayedArray)
+library(SummarizedExperiment)
+library(DESeq2)
+library(fgsea)
+library(gage)
+library(AnnotationHub)
+library(EnhancedVolcano)
+
+```
+
+##Set gene counts dataset directroy path
+
+```{r}
+directory <- here::here() #here::here() represents the current working directory
+getwd()
+```
+
+##Generate HTSeqsampleTable
+
+```{r}
+samplenames <- c("NS7_2", "NS8_1", "NS9_1", "NS10_1", "CEBPD7_1", "CEBPD8_1", "CEBPD9_1", "CEBPD10_2")
+samplefiles <- c("NS7_2.gene.counts.txt", "NS8_1.gene.counts.txt", "NS9_1.gene.counts.txt", "NS10_1.gene.counts.txt", "CEBPD7_1.gene.counts.txt", "CEBPD8_1.gene.counts.txt", "CEBPD9_1.gene.counts.txt", "CEBPD10_2.gene.counts.txt")
+sampleconditions <- c("NS", "NS", "NS", "NS", "CEBPD", "CEBPD", "CEBPD", "CEBPD")
+sampleTable <- data.frame(sampleName = samplenames, fileName = samplefiles, condition = sampleconditions)
+sampleTable$condition <- factor(sampleTable$condition)
+```
+
+##Generate DESeqDataSet
+
+```{r}
+ddsHTseq <- DESeqDataSetFromHTSeqCount(sampleTable = sampleTable, directory = directory, design = ~ condition)
+```
+
+##Combine gene names from gtfv39 to ddsHTseq
+
+```{r}
+#load gencode.key.Rdata
+base::load(here::here("gencode.key.Rdata")) #somehow load() doesn't work
+head(gencode.key)
+
+#check gencode.key and ddsHTseq dimensions
+dim(gencode.key)
+dim(ddsHTseq)
+
+#Do matchup ENSEMBL IDs?
+all(rownames(ddsHTseq) == gencode.key$id)
+
+#matchup ENSEMBL IDs
+gencode.key <- gencode.key[match(rownames(ddsHTseq), gencode.key$id),]
+
+#check if ENSEMBL IDs matchup now
+all(rownames(ddsHTseq) == gencode.key$id)
+
+#Pre-check rowData ddsHTseq for number of columns it has
+rowData(ddsHTseq)
+
+#add gene names from gencode.key to ddsHTseq 
+mcols(ddsHTseq) <- cbind(mcols(ddsHTseq), gencode.key)
+
+#Re-check rowData ddsHTseq for number of columns it has
+rowData(ddsHTseq)
+```
+
+##Set control sample (NS) as first factor level
+
+```{r}
+ddsHTseq$condition <- factor(ddsHTseq$condition, levels = c("NS", "CEBPD"))
+```
+
+##View ddsHTSeq
+
+```{r}
+ddsHTseq
+summary(ddsHTseq)
+colData(ddsHTseq)
+rowData(ddsHTseq)
+assay(ddsHTseq)
+dim(ddsHTseq)
+```
+
+##Filtering data for more than 4 reads
+
+```{r}
+keep4 <- rowSums(counts(ddsHTseq)) >= 4
+ddsHTseq <- ddsHTseq[keep4, ]
+table(keep4)
+summary(ddsHTseq)
+```
+
+##DESeq
+
+```{r}
+dds <- DESeq(ddsHTseq)
+resultsNames(dds)
+```
+
+##plotPCA
+
+```{r}
+vsd <- vst(dds, blind = FALSE)
+plotPCA(vsd)
+colnames(dds)
+
+rld <- rlog(dds, blind = FALSE)
+plotPCA(rld)
+
+p = plotPCA(rld)
+
+p = p + geom_label(label = names)
+print(p)
+```
+
+##dds_results
+
+```{r}
+dds_res <- results(dds)
+dim(dds_res)
+```
+
+##Add new ddsHTseq column name **gene** to dds_res
+
+```{r}
+#check ddsHTseq column names
+mcols(ddsHTseq)
+
+#add new ddsHTseq column **gene** to dds_res
+dds_res$gene <- mcols(ddsHTseq)$gene
+
+#check dds_res column names
+colnames(dds_res)
+```
+
+##plotMA
+
+```{r}
+plotMA(dds_res, xlab = "Mean of normalized counts", ylab = "log2FoldChange", main = "CEBPD vs NS", alpha = 0.05)
+```
+
+Enhanced volcano for CEBPD manuscript
+
+y = "padj" plots the -log10(padj) values on y-axis. That's why ylab = -log10(padj). -log10(0.05) equals to 1.3 fold change that's what we are seeing in the plot.
+
+```{r}
+#dds_res$gene <- row.names(dds_res)
+
+EnhancedVolcano(dds_res, lab = dds_res$gene, x = "log2FoldChange", y = "padj", axisLabSize = 12, xlim = c(-9, 9), pCutoff = 0.05, FCcutoff = 0, labSize = 3, xlab = "log2FoldChange", ylab = "-log10(padj)", ylim = c(0, 8), legendPosition = "top", legendLabSize = 11, legendIconSize = 3.0,labFace = 'bold', gridlines.major = FALSE, gridlines.minor = FALSE)
+```
+
+##FGSEA
+
+```{r}
+#rank genes based on log2FC
+gene.list = dds_res$log2FoldChange
+names(gene.list) <- dds_res$gene
+gene.list = sort(gene.list, decreasing = TRUE)
+
+#removing NAs & duplicates
+gene.list = gene.list[!is.na(gene.list)]
+gene.list = gene.list[!duplicated(names(gene.list))]
+head(gene.list)
+
+msigdb.url = 'https://data.broadinstitute.org/gsea-msigdb/msigdb/release/7.5/'
+
+system('wget https://data.broadinstitute.org/gsea-msigdb/msigdb/release/7.5/h.all.v7.5.symbols.gmt')
+
+GO_file = 'h.all.v7.5.symbols.gmt'
+myGO = gmtPathways(GO_file)
+
+fgRes = as.data.frame(fgsea(pathways = myGO, stats = gene.list, minSize=5, maxSize=600, nperm=10000))
+
+fgRespvalorder <- fgRes[fgRes$pval <= 0.05,][order(fgRes$NES[fgRes$pval <= 0.05], decreasing =TRUE),]
+fgRespvalorder
+
+fgRespvalorder <- as.data.frame(fgRespvalorder)
+fgRespvalorder <- fgRespvalorder[, -8]
+
+write.csv(fgRespvalorder, file = "fgsea_log2FConly_results_44.csv")
+```
+
+FGSEA barplot: fgsea_log2FConly_results_44_mod.csv
+
+```{r}
+gseaplot <- read.csv("fgsea_log2FConly_results_44_mod.csv")
+gseaplot0.05 <- filter(gseaplot, padj < 0.05)
+
+ggplot(gseaplot0.05, aes(x = NES, y = reorder(pathway, NES))) + geom_col(fill = "skyblue") + theme_classic()
+```

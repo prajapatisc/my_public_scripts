@@ -1,0 +1,109 @@
+
+##################### SSH KEYS############################
+
+### WHAT IS AN SSH KEY???
+Used to authenticate and secure connections between two computers most often a server (github) and a local computer.  It is cryptographic key pair of:
+
+(1) public key (server - "id_ed25519.pub")
+(2) private key (computer - "id_ed25519")
+
+Public key is added to the remote server (github), and the private key stays on the local computer. While making connection between the two it is made sure that both keys match.
+
+### CHECKING FOR EXISTING KEY ON THE LOCAL COMPUTER 
+
+ls -al ~/.ssh
+
+### GENERATION OF NEW SSH KEY: At the prompt say "yes" to accept the default directory to save the key. Provide the passphrase. Passphrase is needed while connecting to the remote server (github). Passphrase can be left blank by not writing anything and just hitting enter. When no passphrase is opted authentication is not prompted while making connections between the used local machine and the remote server (gitHub).
+
+ssh-keygen -t ed25519 -C "schandmc@gmail.com" 
+
+### ADDING KEY TO THE SSH-agent. SSH-agent manages the key and helps connect to the remote servereval "$(ssh-agent -s)"		# Start the SSH-agent in the background
+ssh-add ~/.ssh/id_ed25519	# adds the key to the SSH-agent
+
+### Copying the public key to the remote server (gitHub)
+
+pbcopy < ~/.ssh/id_ed25519.pub 		# copies the public key to the local machine's clipboard, from where it can be pasted to the github.
+
+### Pasting public key to the github
+login to github > settings > SSH and GPG keys > SSH keys > paste the key with CMD+V in the key section. Provide a title for the key. Leave key type as authenticate key. Click add SSH key.
+
+### Testing ssh key connection. Say yes to the prompt asking for connection. This authenticates connection. Now onwards documents can be pushed and pulled between the local machine and the server (github). If passphrase provided, it will asked for the passphrase every time a push or pull is performed.
+
+ssh -t git@github.com
+
+
+
+###############################GIT & GITHUB###########################
+
+# Configure git account with your name and email address
+git config --global user.name "name"
+git config --global user.email "email@gmail.com"
+
+# Check git account credentials
+git config --global user.name
+git config --global user.email
+
+# Getting help on git commands
+git <command> -h
+git help <command>
+
+# Editing files with git
+git rm filename.txt			 # deletes file
+git restore filename.txt		 # restores deleted file
+git mv old_filename.txt new_filename.txt # renames file
+
+### <git init> command LOCAL REPOSITORY on computer. Make a .gitignore file in the repository and add all the file names to it to exclude them from pushing into GitHub
+cd /path/to/your/local-repository	# Move to the directory to be set as a git repository
+git init	# Sets the working directory local-repository as a git repository. Creates a hidden folder .git.
+
+### Local repository on computer is the WORKING AREA. Here files can be edited as needed. However, git doesn't record changes in the working area files until they are staged/tracked. 
+
+### <git add> command puts files in the STAGING AREA. git add asks git to start tracking file(s) in the repository. Any new changes made in the repository after the previous commits needs to be staged with git add again before committing the new changes. Tracked files can be set to be untracked as well if needed.
+
+git add .	# tracks all files in the repository except the ones added in .gitignore file
+git add filename.txt	# tracks only one specific file filenames.txt
+git restore --staged filename.txt.	# can undo git add filename.txt command
+
+### <git commit> command SNAPSHOTS the current status of the file(s) with a message. It is basically making entry to the history book what is done at what time and by who. Always needs a message. 
+git commit	# opens a text editor to enter the message
+git commit -m "message"	# doesn't open text editor. Need to type the message in the command line
+git commit -a -m "message"	# Does both stages and commits all the updated files
+
+### <git status> command checks STATUS OF THE REPOSITORY. Shows the details such branch, commits, and tracked/untracked files. Updated files need to be staged and committed again with or without message before pushing to the Github repository.
+
+git status
+
+### <git branch> command creates a BRANCH (exact copy of the main local repository. Changes in the new branch can be made without affecting the main branch. When satisfied with changes in the new branch, changes can be merged to the main branch
+
+git branch bugfix_branch	# creates new branch bugfix_branch
+git branch	# lists all the branches with asterisk symbol on the currently active branch
+git switch bugfix_branch	# switches to bugfix_branch. Changes can be staged and committed to this branch will not affect main brach
+
+### <git merge> command merges child branches to the main branch. When there are changes only in the child branch (bugfix_branch) and no changes in the main brach, merging is smooth. But when there are different changes in both the main branch and the child branch at the same location, merge command results in CONFLICT error message. In that case after running the <git merge> command and getting the error message, open the file showing conflict in the main branch. Do the final edits as needed in the main brach and then stage and commit the file in the main branch to resolve the conflict.
+
+git merge -m "bugfix_branch merged to main branch" bugfix_branch	# merges bugfix_branch to main branch
+git merge bugfix_branch 	# merges bugfix_branch to main branch without a message. 
+
+
+### DELETING A BRANCH. Child branches should be deleted after merging to the main branch
+git branch -d bugfix_branch	# deletes bugfix_branch after merging it to the main branch
+
+### Other GIT COMMANDS
+
+# Finding all the commits made
+git log
+git log --oneline
+git log -p	# See what changes were made at different commits. Press down arrow key to see more entries
+
+# Amending the last git commit entry
+git commit --amend -m "New commit message" 
+
+### <git remote add> command connects the local repository to the cloud GitHub repository
+
+git remote add origin https://github.com/your-username/your-repo-name.git	# Connects remote repository "origin" hosted at https://github.com/prajapatisc/test.git with the local repository on your computer. We are giving the "origin" name to the remote repository at https://github.com/prajapatisc/test.git. Origin is the default name given to remote repository.
+
+### RENAME LOCAL REPOSITORY BRANCH. This forces local repository name "master" to "main" to match with cloud GitHub repository branch "main"
+git branch -M main
+
+### <git push> command pushes changes made in the local repository to the GitHub cloud repository. However, before pushing changes, the local repository needs to be connected to the cloud GitHub repository by using <git remote add> command
+git push -u origin main 	# -u (stands for --set-upstream) sets a tracking relationship between the main branches of the local repository and remote repository origin. Arguments -u origin main needs to be run only once to establish the relationship. After this only <git push> is needed.
