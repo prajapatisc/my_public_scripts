@@ -1,4 +1,49 @@
-### RIVANNA LOGINssh -Y scp4f@rivanna.hpc.virginia.edupassword: eservices password### PROVIDING TERMINAL ACCESS TO MAC'S DESKTOP/DOCUMENT FOLDERSSystem preferences > Security & privacy > Files & folders > here enable/disable terminal access to the desired folders### COPYING/MOVING FILES FROM MAC TO EXTERNAL DRIVE FOLDERcp <file name in the current directory> </Volumes/splaptopbackup>### COPY FILE FROM LOCAL MACHINE TO RIVANNAscp -r Documents/hello2.sh scp4f@rivanna.hpc.virginia.edu:~/### COPY FILES FROM RIVANNA TO LOCAL MACHINE HOME DIRECTORYscp scp4f@rivanna.hpc.virginia.edu:/home/scp4f/std1 ./ORscp scp4f@rivanna.hpc.virginia.edu:~/std1 ./### COPY FILES FROM ./ DIRECTORY TO THE DESIRED FOLDER ON COMPUTERcp file_name Desktop/### UPDATING bashrc/bash_profile WITH sp_scripts directory:export PATH="$PATH: /home/scp4f/sp_scripts/"### NEED TO SOURCE FILE AFTER UPDATING bashrc/bash_profile TO WORKsource the file by	source ~/sp_scripts/hello.shORclose the terminal & 	run the file <hello.sh> from anywhere.### BASH COMMAND PROMPT: Subhashs-MacBook-Pro:~ SP2018$Subhashs-MacBook-Pro is the hostname or computer name: is the separator~ is the current directory location that is home directory. It changes when we navigate with cdSP2018 is the user name$ is the prompt### MAKIN .rnk FILE:Column 1 contains list of gene names and column 2 contains ranked weight (logFoldChange here). Name column 1 as "# ignore" and leave column 2 name blank. Here is an example,### MAKING .gct COUNTMATRIX FILE:1,1: just #1.22,1: number of genes2,2: number of samples
+### RIVANNA LOGIN
+
+ssh -Y scp4f@login.hpc.virginia.edu
+password: eservices password
+
+### PROVIDING TERMINAL ACCESS TO MAC'S DESKTOP/DOCUMENT FOLDERS
+System preferences > Security & privacy > Files & folders > here enable/disable terminal access to the desired folders
+
+### COPYING/MOVING FILES FROM MAC TO EXTERNAL DRIVE FOLDER
+cp <file name in the current directory> </Volumes/splaptopbackup>
+
+### COPY FILE FROM LOCAL MACHINE TO RIVANNA
+scp -r Documents/hello2.sh scp4f@rivanna.hpc.virginia.edu:~/
+
+### COPY FILES FROM RIVANNA TO LOCAL MACHINE HOME DIRECTORY
+scp scp4f@rivanna.hpc.virginia.edu:/home/scp4f/std1 ./
+OR
+scp scp4f@rivanna.hpc.virginia.edu:~/std1 ./
+
+### COPY FILES FROM ./ DIRECTORY TO THE DESIRED FOLDER ON COMPUTER
+cp file_name Desktop/
+
+### UPDATING bashrc/bash_profile WITH sp_scripts directory:
+export PATH="$PATH: /home/scp4f/sp_scripts/"
+
+### NEED TO SOURCE FILE AFTER UPDATING bashrc/bash_profile TO WORK
+source the file by
+	source ~/sp_scripts/hello.sh
+OR
+close the terminal & 
+	run the file <hello.sh> from anywhere.
+
+### BASH COMMAND PROMPT: Subhashs-MacBook-Pro:~ SP2018$
+Subhashs-MacBook-Pro is the hostname or computer name
+: is the separator
+~ is the current directory location that is home directory. It changes when we navigate with cd
+SP2018 is the user name
+$ is the prompt
+
+### MAKIN .rnk FILE:
+Column 1 contains list of gene names and column 2 contains ranked weight (logFoldChange here). Name column 1 as "# ignore" and leave column 2 name blank. Here is an example,
+
+### MAKING .gct COUNTMATRIX FILE:
+1,1: just #1.2
+2,1: number of genes
+2,2: number of samples
 
 First fill these information on top of an excel file containing counts or tpm. Then save it as tab delimited .txt file, then convert it to .gct file using unix. Here, the format:
 
@@ -7,14 +52,27 @@ First fill these information on top of an excel file containing counts or tpm. T
 +----------------------------------------------------------------------------------+
 | 23250 | 52 		| 	| 	| 	| 	| 	| 	|
 +----------------------------------------------------------------------------------+
-| Name 	| DESCRIPTION 	| REL1	| REL2 	| REL3	| DIA1 	| DIA2 	| DIA3 	|+----------------------------------------------------------------------------------+
+| Name 	| DESCRIPTION 	| REL1	| REL2 	| REL3	| DIA1 	| DIA2 	| DIA3 	|
++----------------------------------------------------------------------------------+
 | TP53	| 		| 20 	| 60 	| 34 	| 89 	| 56 	| 78	|
 +----------------------------------------------------------------------------------+
 | CEBPD |		| 45 	| 73 	| 21 	| 34 	| 87	| 75	|
-+----------------------------------------------------------------------------------+### MAKING .cls FILEType all the information in space or tab word file in the required style. All samples of a group should have same ID. Save this file as plain text (.txt) file using MS Word. Convert this file to .cls file using Unix and use it.52 2 1# REL DIAREL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA### MAKING .gmt FILEFill in all the data in an excel sheet format as shown below. Using excel save it as tab delimited txt file. Using Unix convert it to .gmt file.
++----------------------------------------------------------------------------------+
+
+### MAKING .cls FILE
+Type all the information in space or tab word file in the required style. All samples of a group should have same ID. Save this file as plain text (.txt) file using MS Word. Convert this file to .cls file using Unix and use it.
+
+52 2 1
+# REL DIA
+REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL REL DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA DIA
+
+
+### MAKING .gmt FILE
+Fill in all the data in an excel sheet format as shown below. Using excel save it as tab delimited txt file. Using Unix convert it to .gmt file.
 +---------------------------------------------------------+
 | all DEGs           | NA | CFH   | ACSM3 | ADAM22 | CD4  |
 +---------------------------------------------------------+
 | upregulated DEGs   | NA | MAF   | TPSB2 | MMP9   | CDK6 |
 +---------------------------------------------------------+
-| downregulated DEGs | NA | PSKH2 | TP53  | PFDN6  | AATK |+---------------------------------------------------------+
+| downregulated DEGs | NA | PSKH2 | TP53  | PFDN6  | AATK |
++---------------------------------------------------------+
